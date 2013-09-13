@@ -1026,6 +1026,13 @@ int wpa_driver_wext_scan(void *priv, struct wpa_driver_scan_params *params)
 	const u8 *ssid = params->ssids[0].ssid;
 	size_t ssid_len = params->ssids[0].ssid_len;
 
+#ifdef ANDROID
+	if (drv->capa.max_scan_ssids > 1) {
+		ret = wpa_driver_wext_combo_scan(priv, params);
+		goto scan_out;
+	}
+#endif
+
 	if (ssid_len > IW_ESSID_MAX_SIZE) {
 		wpa_printf(MSG_DEBUG, "%s: too long SSID (%lu)",
 			   __FUNCTION__, (unsigned long) ssid_len);
@@ -1050,7 +1057,9 @@ int wpa_driver_wext_scan(void *priv, struct wpa_driver_scan_params *params)
 		perror("ioctl[SIOCSIWSCAN]");
 		ret = -1;
 	}
-
+#ifdef ANDROID
+scan_out:
+#endif
 	/* Not all drivers generate "scan completed" wireless event, so try to
 	 * read results after a timeout. */
 	timeout = 10;
@@ -1585,8 +1594,11 @@ static int wpa_driver_wext_get_range(void *priv)
 		drv->capa.auth = WPA_DRIVER_AUTH_OPEN |
 			WPA_DRIVER_AUTH_SHARED |
 			WPA_DRIVER_AUTH_LEAP;
+#ifdef ANDROID
+		drv->capa.max_scan_ssids = WEXT_CSCAN_AMOUNT;
+#else
 		drv->capa.max_scan_ssids = 1;
-
+#endif
 		wpa_printf(MSG_DEBUG, "  capabilities: key_mgmt 0x%x enc 0x%x "
 			   "flags 0x%x",
 			   drv->capa.key_mgmt, drv->capa.enc, drv->capa.flags);
